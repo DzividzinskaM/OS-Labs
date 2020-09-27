@@ -1,249 +1,123 @@
-// OSlab1.cpp : This file contains the 'main' function. Program execution begins and ends there.
+// OS-lab1.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
 #include <iostream>
-#include <list>
-
-
 
 using namespace std;
 
-int alignment = 4;
-
-
-struct Header {
-    size_t currBlockSize;
-    bool isAvailble = true;
-};
-
-
-struct Block {
-    Header header;
-    size_t dataSize = 0;
-};
-
+const int offsetBlockAvailablity = 1;
+const int offsetCurrBlockSize = 4;
+const int headerSize = 5;
+const int alignment = 4;
 
 class Allocator {
 public:
-    size_t totalSize;
-    void* start_Ptr;
-    int blockNumber = 1;
-    list<Block> blocksLst;
+	size_t totalSize;
+	uint8_t* startPtr;
+	int blockNumber;
 
-    Allocator(size_t size) {
-        totalSize = size;
-        start_Ptr = malloc(totalSize);
-        Header firstHeader;
-        firstHeader.currBlockSize = totalSize;
-        Block firstBlock;
-        firstBlock.header = firstHeader;
-        blocksLst.push_back(firstBlock);
-    }
+	Allocator(size_t size) {
+		totalSize = size;
+		startPtr = (uint8_t*)malloc(totalSize);
+		*(startPtr + offsetBlockAvailablity) = true;
+		*(startPtr + headerSize) = totalSize - headerSize;
+		blockNumber = 1;
+	}
 
-    void* mem_alloc(size_t size) {
-        if (size == NULL) {
-            return nullptr;
-        }
-        size_t nextAddr = (size_t)start_Ptr;
+	void* mem_alloc(size_t size) {
 
-        for (auto iter = blocksLst.begin(); iter != blocksLst.end(); iter++) {
-            Block block = *iter;
-            if (block.header.isAvailble && block.header.currBlockSize >= calculateNewBlockSize(size)) {
-                if (block.header.currBlockSize - calculateNewBlockSize(size) > sizeof(Header)) {
-                    Block newBlock;
-                    newBlock.header.isAvailble = false;
-                    newBlock.header.currBlockSize = calculateNewBlockSize(size);
-                    newBlock.dataSize = size;
+		uint8_t* currentPtr = startPtr;
 
-                    block.header.currBlockSize -= newBlock.header.currBlockSize;
-                    block.header.isAvailble = true;
+		for (int i = 0; i < totalSize; i++) {
 
+			bool isAvailable = *(currentPtr + offsetBlockAvailablity);
+			size_t blockSize = *(currentPtr + headerSize);
+			size_t adjustedSize = calculateSize(size);
 
-                    blocksLst.insert(iter, block);
-                    blocksLst.erase(iter--);
-                    blocksLst.insert(iter++, newBlock);
+			if (isAvailable && blockSize >= adjustedSize) {
 
-                }
-                else {
-                    block.header.isAvailble = false;
-                    block.dataSize = size;
+				size_t localOffset = offsetBlockAvailablity;
+				*(currentPtr + localOffset) = false;
 
-                    blocksLst.insert(iter, block);
-                    blocksLst.erase(iter--);
-                }
-                
-                break;
-               
-            }
-            nextAddr += block.header.currBlockSize;
-        }
-        if (nextAddr - (size_t)start_Ptr == totalSize)
-            return NULL;
-        return (void*)nextAddr;
-    }
+				void* startResBlockPtr = currentPtr + localOffset;
 
-    size_t calculateNewBlockSize(size_t size) {
-        size_t currentSize = size + sizeof(Header);
-        if (currentSize % alignment == 0) 
-            return currentSize;
-        else 
-            return currentSize + (currentSize % alignment);
-        
-    }
+				localOffset += offsetCurrBlockSize;
+				*(currentPtr + localOffset) = adjustedSize;
+				localOffset += adjustedSize;
 
+				localOffset += offsetBlockAvailablity;
+				*(currentPtr + localOffset) = true;
+				localOffset += offsetCurrBlockSize;
+				*(currentPtr + localOffset) = blockSize - adjustedSize;
 
-    void* mem_realloc(void* addr, size_t size) {
-        if (addr == NULL)
-            mem_alloc(size);
+				blockNumber++;
+				return startResBlockPtr;
 
-        size_t needAddr = (size_t)addr;
-        size_t currAddr = (size_t)start_Ptr;
+			}
+			currentPtr += headerSize;
+			currentPtr += blockSize;
+		}
 
+		return NULL;
+	}
 
-        for (auto iter = blocksLst.begin(); iter != blocksLst.end(); iter++) {
-            Block block = *iter;
-            if (currAddr == needAddr) {
-                if (block.header.currBlockSize > calculateNewBlockSize(size)) {       
-                    Block newBlock;
-                    newBlock.header.isAvailble = false;
-                    newBlock.header.currBlockSize = calculateNewBlockSize(size);
-                    newBlock.dataSize = size;
+	size_t calculateSize(size_t size) {
+		size_t needSize = size + headerSize;
+		if (needSize % alignment == 0)
+			return size;
+		else {
+			size_t resSize = needSize + (alignment - (needSize % alignment));
+			return resSize - headerSize;
+		}
+	}
 
-                    block.header.currBlockSize -= newBlock.header.currBlockSize;
-                    block.header.isAvailble = true;
+	void mem_dump() {
 
+		uint8_t* currentPtr = startPtr;
+		size_t localOffset = 0;
+		for (int i = 0; i < blockNumber; i++) {
 
-                    blocksLst.insert(iter, block);
-                    blocksLst.erase(iter--);
-                    blocksLst.insert(iter++, newBlock);
+			bool isAvailable = *(currentPtr + offsetBlockAvailablity);
+			size_t dataSize = *(currentPtr + headerSize);
 
-                    return (void*)currAddr;
+			cout << "Block " << i;
+			if (isAvailable)
+				cout << "\tAvailable";
+			else
+				cout << "\tNot available";
+			cout << "\tData size " << dataSize;
+			cout << "\tGeneral block size " << dataSize + headerSize;
+			cout << endl;
 
-                }
-                else {
-                    void* newAddr = mem_alloc(size);
-                    if (newAddr != NULL) {
-                        mem_free(addr);
-                        return newAddr;
-                    }
-                    else {
-                        return addr;
-                    }
-
-               
-                }
-               
-            }
-            currAddr += block.header.currBlockSize;
-        }
-        
-    }
-  
-
-
-    void mem_free(void* addr) {
-        if (addr == NULL)
-            return;
-
-        size_t needAddr = (size_t)addr;
-        size_t currAddr = (size_t)start_Ptr;
-
-        for (auto iter = blocksLst.begin(); iter != blocksLst.end(); iter++) {
-            Block block = *iter;
-            if (currAddr == needAddr && !block.header.isAvailble) {
-                block.header.isAvailble = true;
-                block.dataSize = 0;
-                blocksLst.insert(iter, block);
-                blocksLst.erase(iter--);
-                return;
-            }
-            currAddr += block.header.currBlockSize;
-        }
-        
-    }
-
-    void mem_dump() {
-        int i = 1;
-        for (Block block : blocksLst) {
-
-            cout << "Block: " << i << " \tblock size " << block.header.currBlockSize << " \tblock data size " << block.dataSize;
-            if (block.header.isAvailble)
-                cout << "\t Block is available" << endl;
-            else
-                cout << "\t Block is NOT available" << endl;
-
-            i++;
-        }
-        cout << endl;
-    }
-
+			currentPtr += headerSize;
+			currentPtr += dataSize;
+		}
+	}
 
 };
 
-
-
-
-
-
-int main()
+void main()
 {
-    Allocator allocator(1024);
-    
-    cout << "Start " << allocator.start_Ptr << endl;
-    cout << "------------------Allocate-----------------" << endl;
-    cout << "Size " << 50;
-    cout <<"\t\tResult address " << allocator.mem_alloc(50) << endl;
-    allocator.mem_dump();
 
-   
+	Allocator allocator(1024);
 
-    cout << "------------------Allocate-----------------" << endl;
-    cout << "Size " << 25;
-    void* addr = allocator.mem_alloc(25);
-    cout <<"\t\tResult address " << addr << endl;
-    allocator.mem_dump();
-
-   
-
-    cout << "------------------Allocate-----------------" << endl;
-    cout << "Size " << 30;
-    void* addr1 = allocator.mem_alloc(30);
-    cout << "\t\tResult address " <<  addr1 << endl;
-    allocator.mem_dump();
+	cout << "Start pointer " << (void*)allocator.startPtr << endl;
 
 
-    cout << "------------------Reallocate-----------------" << endl;
-    cout << "Address " << addr1 << "\tnew size 35" << endl;
-    cout << "Result address " << allocator.mem_realloc(addr1, 35) << endl;
-    allocator.mem_dump();
+	cout << "----------Allocation ---- size 20 ----" << endl;
+	cout << allocator.mem_alloc(20) << endl;
+	cout << endl;
+	allocator.mem_dump();
+
+	cout << endl;
+	cout << "----------Allocation ---- size 50 ----" << endl;
+	cout << allocator.mem_alloc(50) << endl;
+	cout << endl;
+	allocator.mem_dump();
 
 
-    cout << "------------------Deallocate-----------------" << endl;
-    cout << "Address " << addr << endl;
-    allocator.mem_free(addr);
-    allocator.mem_dump();
 
 
-    cout << "------------------Allocate-----------------" << endl;
-    cout << "Size " << 20;
-    void* addr2 = allocator.mem_alloc(20);
-    cout << "\t\tResult address " << addr2 << endl;
-    allocator.mem_dump();
 
-
-    cout << "------------------Allocate-----------------" << endl;
-    cout << "Size " << 5;
-    cout << "\t\tResult address " << allocator.mem_alloc(5) << endl;
-    allocator.mem_dump();
-
-
-    cout << "------------------Reallocate-----------------" << endl;
-    cout << "Address " << addr2 << "\t new size 8" << endl;
-    cout << "Result address " << allocator.mem_realloc(addr2, 8) << endl;
-    allocator.mem_dump();
 
 }
-
-
-
-
