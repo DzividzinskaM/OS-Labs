@@ -48,7 +48,7 @@ public:
 				localOffset += offsetBlockAvailablity;
 				*(currentPtr + localOffset) = true;
 				localOffset += offsetCurrBlockSize;
-				*(currentPtr + localOffset) = blockSize - adjustedSize;
+				*(currentPtr + localOffset) = blockSize - adjustedSize - headerSize;
 
 				blockNumber++;
 				return startResBlockPtr;
