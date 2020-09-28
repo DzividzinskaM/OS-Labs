@@ -20,9 +20,20 @@ public:
 		totalSize = size;
 		startPtr = (uint8_t*)malloc(totalSize);
 		*(startPtr + offsetBlockAvailablity) = true;
-		*(startPtr + headerSize) = totalSize - headerSize;
+		*(startPtr + headerSize) = totalSize-headerSize;
 		blockNumber = 1;
 	}
+
+	size_t calculate_size(size_t size) {
+		size_t needSize = size + headerSize;
+		if (needSize % alignment == 0)
+			return size;
+		else {
+			size_t resSize = needSize + (alignment - (needSize % alignment));
+			return resSize - headerSize;
+		}
+	}
+
 
 	void* mem_alloc(size_t size) {
 
@@ -32,7 +43,7 @@ public:
 
 			bool isAvailable = *(currentPtr + offsetBlockAvailablity);
 			size_t blockSize = *(currentPtr + headerSize);
-			size_t adjustedSize = calculateSize(size);
+			size_t adjustedSize = calculate_size(size);
 
 			if (isAvailable && blockSize >= adjustedSize) {
 
@@ -61,17 +72,9 @@ public:
 		return NULL;
 	}
 
-	size_t calculateSize(size_t size) {
-		size_t needSize = size + headerSize;
-		if (needSize % alignment == 0)
-			return size;
-		else {
-			size_t resSize = needSize + (alignment - (needSize % alignment));
-			return resSize - headerSize;
-		}
-	}
 
 	void mem_free(void* addr) {
+
 		uint8_t* currentPtr = startPtr;
 
 		for (int i = 0; i < blockNumber; i++) {
@@ -87,6 +90,58 @@ public:
 			currentPtr += headerSize;
 			currentPtr += dataSize;
 		}
+	}
+
+	void* mem_realloc(void* addr, size_t size) {
+		uint8_t* currentPtr = startPtr;
+
+		for (int i = 0; i < blockNumber; i++) {
+			bool isAvailable = *(currentPtr + offsetBlockAvailablity);
+			size_t dataSize = *(currentPtr + headerSize);
+
+
+			if ((currentPtr + offsetBlockAvailablity == (uint8_t*)addr) && dataSize < calculate_size(size)) {
+
+				void* resAddress = mem_alloc(size);
+				if (resAddress == NULL)
+					return NULL;
+				else {
+					mem_free(addr);
+					return resAddress;
+				}
+			}
+			else if((currentPtr + offsetBlockAvailablity == (uint8_t*)addr) && dataSize >= calculate_size(size)) {
+				size_t adjustedSize = calculate_size(size);
+
+				size_t localOffset = offsetBlockAvailablity;
+				*(currentPtr + localOffset) = false;
+
+				void* startResBlockPtr = currentPtr + localOffset;
+				localOffset += offsetCurrBlockSize;
+
+				*(currentPtr + localOffset) = adjustedSize;
+
+
+				if (dataSize - adjustedSize - headerSize <= headerSize) {
+					localOffset += dataSize;
+				}
+
+				else {
+					localOffset += adjustedSize;
+					localOffset += offsetBlockAvailablity;
+					*(currentPtr + localOffset) = true;
+					localOffset += offsetCurrBlockSize;
+					*(currentPtr + localOffset) = dataSize - adjustedSize - headerSize;
+					blockNumber++;
+				}
+
+				return startResBlockPtr;
+			}
+
+			currentPtr += headerSize;
+			currentPtr += dataSize;
+		}
+		return NULL;
 	}
 
 	void mem_dump() {
@@ -118,7 +173,8 @@ public:
 void main()
 {
 
-	Allocator allocator(1024);
+	Allocator allocator(256);
+	allocator.mem_dump();
 
 	cout << "Start pointer " << (void*)allocator.startPtr << endl;
 
@@ -139,7 +195,14 @@ void main()
 
 	cout << endl;
 	cout << "----------Allocation ---- size 40 ----" << endl;
-	cout << allocator.mem_alloc(40) << endl;
+	addr1 = allocator.mem_alloc(40);
+	cout << addr1 << endl;
+	cout << endl;
+	allocator.mem_dump();
+
+	cout << endl;
+	cout << "----------Realloc ---- " << addr1 << "---" << "size 50 ----" << endl;
+	cout << allocator.mem_realloc(addr1, 50) << endl;
 	cout << endl;
 	allocator.mem_dump();
 
@@ -150,12 +213,19 @@ void main()
 	cout << endl;
 	allocator.mem_dump();
 
-
 	cout << endl;
-	cout << "----------Free ---- " << addr1 << "---" << endl;
-	allocator.mem_free(addr1);
+	cout << "----------Realloc ---- " << addr1 << "---" << "size 20 ----" << endl;
+	cout << allocator.mem_realloc(addr1, 20) << endl;
 	cout << endl;
 	allocator.mem_dump();
+
+	cout << endl;
+	cout << "----------Allocation ---- size 20 ----" << endl;
+	addr1 = allocator.mem_alloc(20);
+	cout << addr1 << endl;
+	cout << endl;
+	allocator.mem_dump();
+	
 
 
 
