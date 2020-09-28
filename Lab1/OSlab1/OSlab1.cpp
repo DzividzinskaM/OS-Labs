@@ -105,6 +105,7 @@ public:
 				cout << "\tNot available";
 			cout << "\tData size " << dataSize;
 			cout << "\tGeneral block size " << dataSize + headerSize;
+			cout << "\tBlock address " << (void*)(currentPtr + offsetBlockAvailablity);
 			cout << endl;
 
 			currentPtr += headerSize;
