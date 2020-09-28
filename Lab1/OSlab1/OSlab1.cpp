@@ -71,6 +71,24 @@ public:
 		}
 	}
 
+	void mem_free(void* addr) {
+		uint8_t* currentPtr = startPtr;
+
+		for (int i = 0; i < blockNumber; i++) {
+			bool isAvailable = *(currentPtr + offsetBlockAvailablity);
+			size_t dataSize = *(currentPtr + headerSize);
+
+
+			if ((currentPtr + offsetBlockAvailablity == (uint8_t*)addr) && !isAvailable) {
+				*(currentPtr + offsetBlockAvailablity) = true;
+				return;
+			}
+
+			currentPtr += headerSize;
+			currentPtr += dataSize;
+		}
+	}
+
 	void mem_dump() {
 
 		uint8_t* currentPtr = startPtr;
@@ -105,15 +123,39 @@ void main()
 
 
 	cout << "----------Allocation ---- size 20 ----" << endl;
-	cout << allocator.mem_alloc(20) << endl;
+	void* addr1 = allocator.mem_alloc(20);
+	cout << addr1 << endl;
 	cout << endl;
 	allocator.mem_dump();
 
 	cout << endl;
 	cout << "----------Allocation ---- size 50 ----" << endl;
-	cout << allocator.mem_alloc(50) << endl;
+	void* addr = allocator.mem_alloc(50);
+	cout << addr << endl;
 	cout << endl;
 	allocator.mem_dump();
+
+
+	cout << endl;
+	cout << "----------Allocation ---- size 40 ----" << endl;
+	cout << allocator.mem_alloc(40) << endl;
+	cout << endl;
+	allocator.mem_dump();
+
+
+	cout << endl;
+	cout << "----------Free ---- " << addr << "---" << endl;
+	allocator.mem_free(addr);
+	cout << endl;
+	allocator.mem_dump();
+
+
+	cout << endl;
+	cout << "----------Free ---- " << addr1 << "---" << endl;
+	allocator.mem_free(addr1);
+	cout << endl;
+	allocator.mem_dump();
+
 
 
 
