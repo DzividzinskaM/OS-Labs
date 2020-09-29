@@ -84,6 +84,7 @@ public:
 
 			if ((currentPtr + offsetBlockAvailablity == (uint8_t*)addr) && !isAvailable) {
 				*(currentPtr + offsetBlockAvailablity) = true;
+				merging_free_blocks();
 				return;
 			}
 
@@ -135,6 +136,7 @@ public:
 					blockNumber++;
 				}
 
+				merging_free_blocks();
 				return startResBlockPtr;
 			}
 
@@ -142,6 +144,57 @@ public:
 			currentPtr += dataSize;
 		}
 		return NULL;
+	}
+
+	void merging_free_blocks() {
+
+		uint8_t* currentPtr = startPtr;
+
+		for (int i = 0; i < blockNumber; i++) {
+
+			bool isAvailbaleBlockI = *(currentPtr + offsetBlockAvailablity);
+			size_t dataSizeBlockI = *(currentPtr + headerSize);
+
+			if (isAvailbaleBlockI) {
+
+				uint8_t* firstFreeBlockPtr = currentPtr + offsetBlockAvailablity;
+				int numberFreeBlocks = 0;
+				size_t freeSize = dataSizeBlockI;
+
+				currentPtr += (headerSize + dataSizeBlockI);
+
+				for (int j = i+1; j < blockNumber; j++) {
+
+
+					bool isAvailbaleBlockJ = *(currentPtr + offsetBlockAvailablity);
+					size_t dataSizeBlockJ = *(currentPtr + headerSize);
+
+					if (isAvailbaleBlockJ)
+					{
+						numberFreeBlocks++;
+						freeSize += dataSizeBlockJ;
+						freeSize += headerSize;
+
+					}
+
+					if (!isAvailbaleBlockJ || (isAvailbaleBlockJ && j == blockNumber - 1)) {
+
+						*(firstFreeBlockPtr + offsetCurrBlockSize) = freeSize;
+						blockNumber -= numberFreeBlocks;
+
+						return;
+					}
+
+					currentPtr += headerSize;
+					currentPtr += dataSizeBlockJ;
+				}
+			}
+
+			currentPtr += headerSize;
+			currentPtr += dataSizeBlockI;
+		}
+		
+
 	}
 
 	void mem_dump() {
@@ -202,7 +255,8 @@ void main()
 
 	cout << endl;
 	cout << "----------Realloc ---- " << addr1 << "---" << "size 50 ----" << endl;
-	cout << allocator.mem_realloc(addr1, 50) << endl;
+	addr1 = allocator.mem_realloc(addr1, 50);
+	cout << addr1 << endl;
 	cout << endl;
 	allocator.mem_dump();
 
@@ -213,11 +267,13 @@ void main()
 	cout << endl;
 	allocator.mem_dump();
 
+
 	cout << endl;
-	cout << "----------Realloc ---- " << addr1 << "---" << "size 20 ----" << endl;
-	cout << allocator.mem_realloc(addr1, 20) << endl;
+	cout << "----------Free ---- " << addr1 << "---" << endl;
+	allocator.mem_free(addr1);
 	cout << endl;
 	allocator.mem_dump();
+
 
 	cout << endl;
 	cout << "----------Allocation ---- size 20 ----" << endl;
