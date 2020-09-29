@@ -80,8 +80,10 @@ Implementation this function in program - __void mem_free(void* addr)__, where *
 pointer, which note on start of need block.
 
 Firstly, we find need block.
+<br>
+<br>
 
-Picture 3. Find needed block by *addr*
+_Picture 3. Find needed block by addr_
 ![find_needed_block](./img/find_need_block.jpg)
 <br>
 <br>
@@ -89,8 +91,9 @@ Picture 3. Find needed block by *addr*
 
 If we find it, we will notice this block available (*isAvailable = true*), else exit.
 <br>
+<br>
 
-Picture 4. Free block
+*Picture 4. Free block*
 <br>
 
 
@@ -101,15 +104,16 @@ Picture 4. Free block
 
 Then we check blocks, is there are some free block **_one by one_** we merge these blocks
 <br>
+<br>
 
 
-Picture 5.Sequence of free blocks
+*Picture 5.Sequence of free blocks*
 ![sequence_free_blocks](./img/sequence_free_blocks.jpg)
 <br>
 <br>
 
 
-Picture 6.Merging free blocks
+*Picture 6.Merging free blocks*
 <br>
 
 
