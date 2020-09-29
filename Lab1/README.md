@@ -108,6 +108,9 @@ Then we check blocks, is there are some free block **_one by one_** we merge the
 
 
 *Picture 5.Sequence of free blocks*
+<br>
+
+
 ![sequence_free_blocks](./img/sequence_free_blocks.jpg)
 <br>
 <br>
@@ -154,7 +157,7 @@ At last we check sequence of free blocks.
 <br>
 
 
-## Exaplles
+## Examples
 
 
 *Picture 9.Allocate memory*
