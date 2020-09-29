@@ -34,6 +34,9 @@ and *dataSize* - *(amount memory - size of header)*
 <br>
 
 *Picture 1. Initial allocator state*
+<br>
+
+
 ![initial State](./img/initialState.jpg)
 <br>
 <br>
@@ -63,6 +66,9 @@ value initial block size subtract need size
 <br>
 
 *Picture 2. Allocate memory*
+<br>
+
+
 ![mem_alloc](./img/mem_alloc.jpg)
 <br>
 <br>
@@ -85,6 +91,9 @@ If we find it, we will notice this block available (*isAvailable = true*), else 
 <br>
 
 Picture 4. Free block
+<br>
+
+
 ![free_block](./img/free_block.jpg)
 <br>
 <br>
@@ -101,6 +110,9 @@ Picture 5.Sequence of free blocks
 
 
 Picture 6.Merging free blocks
+<br>
+
+
 ![merging_free_blocks](./img/merging_free_blocks.jpg)
 <br>
 <br>
