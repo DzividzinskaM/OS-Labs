@@ -38,12 +38,13 @@ public:
 	void* mem_alloc(size_t size) {
 
 		uint8_t* currentPtr = startPtr;
+		size_t adjustedSize = calculate_size(size);
 
 		for (int i = 0; i < totalSize; i++) {
 
 			bool isAvailable = *(currentPtr + offsetBlockAvailablity);
 			size_t blockSize = *(currentPtr + headerSize);
-			size_t adjustedSize = calculate_size(size);
+			
 
 			if (isAvailable && blockSize >= adjustedSize) {
 
@@ -76,6 +77,7 @@ public:
 	void mem_free(void* addr) {
 
 		uint8_t* currentPtr = startPtr;
+		uint8_t* prevPtr = nullptr;
 
 		for (int i = 0; i < blockNumber; i++) {
 			bool isAvailable = *(currentPtr + offsetBlockAvailablity);
@@ -84,17 +86,75 @@ public:
 
 			if ((currentPtr + offsetBlockAvailablity == (uint8_t*)addr) && !isAvailable) {
 				*(currentPtr + offsetBlockAvailablity) = true;
-				merging_free_blocks();
+				merging_free_blocks(prevPtr);
 				return;
 			}
 
+			prevPtr = currentPtr;
 			currentPtr += headerSize;
 			currentPtr += dataSize;
 		}
 	}
 
+
+
+
+	void merging_free_blocks(uint8_t* prevPtr) {
+
+		uint8_t* currPtr = prevPtr;
+
+		bool prevBlockAvailabity;
+		size_t prevBlockDataSize;
+
+		if (prevPtr == nullptr) {
+			prevBlockAvailabity = false;
+			prevBlockDataSize = 0;
+			currPtr = startPtr;
+		}
+		else
+		{
+			prevBlockAvailabity = *(currPtr + offsetBlockAvailablity);
+			prevBlockDataSize = *(currPtr + headerSize);
+
+			currPtr += (headerSize + prevBlockDataSize);
+		}
+
+		bool currBlockAvailabity = *(currPtr + offsetBlockAvailablity);
+		size_t currBlockDataSize = *(currPtr + headerSize);
+
+		uint8_t* nextPtr = currPtr + headerSize + currBlockDataSize;
+
+		bool nextBlockAvailabity = *(nextPtr + offsetBlockAvailablity);
+		size_t nextBlockDataSize = *(nextPtr + headerSize);
+
+
+		if (!prevBlockAvailabity && !nextBlockAvailabity) {
+			return;
+		}
+		else if(!prevBlockAvailabity) {
+			*(currPtr + offsetBlockAvailablity) = true;
+			*(currPtr + headerSize) = currBlockDataSize + nextBlockDataSize + headerSize;
+			size_t size = *(currPtr + headerSize);			
+			blockNumber--;
+		}
+		else if(!nextBlockAvailabity){
+			*(prevPtr + offsetBlockAvailablity) = true;
+			*(prevPtr + headerSize) = prevBlockDataSize + headerSize + currBlockDataSize;
+			blockNumber--;
+
+		}
+		else {
+			*(prevPtr + offsetBlockAvailablity) = true;
+			*(prevPtr + headerSize) = prevBlockDataSize + (2 * headerSize) + currBlockDataSize + nextBlockDataSize;
+			blockNumber -= 2;
+		}
+
+
+	}
+
 	void* mem_realloc(void* addr, size_t size) {
 		uint8_t* currentPtr = startPtr;
+		uint8_t* prevPtr = nullptr;
 
 		for (int i = 0; i < blockNumber; i++) {
 			bool isAvailable = *(currentPtr + offsetBlockAvailablity);
@@ -125,6 +185,7 @@ public:
 
 				if (dataSize - adjustedSize - headerSize <= headerSize) {
 					localOffset += dataSize;
+					merging_free_blocks(prevPtr);
 				}
 
 				else {
@@ -134,68 +195,20 @@ public:
 					localOffset += offsetCurrBlockSize;
 					*(currentPtr + localOffset) = dataSize - adjustedSize - headerSize;
 					blockNumber++;
+					merging_free_blocks(currentPtr);
 				}
 
-				merging_free_blocks();
+				
 				return startResBlockPtr;
 			}
-
+			
+			prevPtr = currentPtr;
 			currentPtr += headerSize;
 			currentPtr += dataSize;
 		}
 		return NULL;
 	}
 
-	void merging_free_blocks() {
-
-		uint8_t* currentPtr = startPtr;
-
-		for (int i = 0; i < blockNumber; i++) {
-
-			bool isAvailbaleBlockI = *(currentPtr + offsetBlockAvailablity);
-			size_t dataSizeBlockI = *(currentPtr + headerSize);
-
-			if (isAvailbaleBlockI) {
-
-				uint8_t* firstFreeBlockPtr = currentPtr + offsetBlockAvailablity;
-				int numberFreeBlocks = 0;
-				size_t freeSize = dataSizeBlockI;
-
-				currentPtr += (headerSize + dataSizeBlockI);
-
-				for (int j = i+1; j < blockNumber; j++) {
-
-
-					bool isAvailbaleBlockJ = *(currentPtr + offsetBlockAvailablity);
-					size_t dataSizeBlockJ = *(currentPtr + headerSize);
-
-					if (isAvailbaleBlockJ)
-					{
-						numberFreeBlocks++;
-						freeSize += dataSizeBlockJ;
-						freeSize += headerSize;
-
-					}
-
-					if (!isAvailbaleBlockJ || (isAvailbaleBlockJ && j == blockNumber - 1)) {
-
-						*(firstFreeBlockPtr + offsetCurrBlockSize) = freeSize;
-						blockNumber -= numberFreeBlocks;
-
-						return;
-					}
-
-					currentPtr += headerSize;
-					currentPtr += dataSizeBlockJ;
-				}
-			}
-
-			currentPtr += headerSize;
-			currentPtr += dataSizeBlockI;
-		}
-		
-
-	}
 
 	void mem_dump() {
 
@@ -257,7 +270,7 @@ void main()
 	cout << "----------Realloc ---- " << addr1 << "---" << "size 50 ----" << endl;
 	addr1 = allocator.mem_realloc(addr1, 50);
 	cout << addr1 << endl;
-	cout << endl;
+	cout << endl;		
 	allocator.mem_dump();
 
 
