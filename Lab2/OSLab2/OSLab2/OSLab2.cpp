@@ -382,8 +382,8 @@ int Allocator::find_page(uint8_t* findedAddr)
     uint8_t* currPtr = startPtr;
 
     for (int i = 0; i < NUMBER_PAGES; i++) {
-        
-        if (findedAddr >= currPtr && findedAddr < pageDescriptors[i].firstAvailableBlockPtr) {
+       
+        if (findedAddr >= currPtr && findedAddr < currPtr +PAGE_SIZE) {
             return i;
         }
 
