@@ -352,6 +352,29 @@ void Allocator::mem_free(void* addr)
 
 }
 
+void* Allocator::mem_realloc(void* addr, size_t size)
+{
+    uint8_t* findedAddr = (uint8_t*)addr;
+    bool availability = *findedAddr;
+    size_t oldSize = get_size_from_header(findedAddr + AVAILABLITY_OFFSET);
+    int pageNumber = find_page(findedAddr);
+
+
+    if (pageDescriptors[pageNumber].availabilty || size == oldSize)
+        return nullptr;
+    if (calculate_size(oldSize) == calculate_size(size)) {
+        write_header(size, findedAddr + AVAILABLITY_OFFSET);
+        return (void*)findedAddr;
+    }
+    else {
+        void* result = mem_alloc(size);
+        mem_free(addr);
+
+        return result;
+    }
+
+}
+
 
 
 int Allocator::find_page(uint8_t* findedAddr)
