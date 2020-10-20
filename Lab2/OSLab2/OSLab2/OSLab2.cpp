@@ -314,6 +314,7 @@ void Allocator::mem_free(void* addr)
         return;
 
     if (size < PAGE_SIZE / 2) {
+        cout << "block" << endl;
         *findedAddr = true;
         pageDescriptors[pageNumber].numberFreeBlocks += 1;
 
@@ -322,26 +323,33 @@ void Allocator::mem_free(void* addr)
     }
     else if (size < PAGE_SIZE) {
         *findedAddr = true;
+        write_header(0, findedAddr + AVAILABLITY_OFFSET);
         pageDescriptors[pageNumber].availabilty = true;
         pageDescriptors[pageNumber].firstAvailableBlockPtr = findedAddr;        
     }
     else {
         int pageCurrNum = pageNumber;
         uint8_t* currPtr = findedAddr;
+
         while (size == PAGE_SIZE) {
-            //cout << "current ptr " << (void*)currPtr << endl;
+            
             *currPtr = true;
             pageDescriptors[pageCurrNum].availabilty = true;
             pageDescriptors[pageCurrNum].firstAvailableBlockPtr = currPtr;
 
+
             pageCurrNum++;
             currPtr += PAGE_SIZE; 
             size = get_size_from_header(currPtr + AVAILABLITY_OFFSET);
+
         }
+        
 
         if (!pageDescriptors[pageCurrNum].availabilty) {
             *currPtr = true;
             pageDescriptors[pageCurrNum].availabilty = true;
+            cout << "page curr number " << pageCurrNum << endl;
+            cout << "page availability " << pageDescriptors[pageCurrNum].availabilty << endl;
             pageDescriptors[pageCurrNum].firstAvailableBlockPtr = currPtr;
             
         }
