@@ -59,6 +59,8 @@ private:
 
     size_t calculate_size(size_t size);
 
+    int find_page(uint8_t* findedAddr);
+
 };
 
 
@@ -167,6 +169,7 @@ void* Allocator::mem_alloc_page(size_t size)
         int startPage = find_start_page(size);
         int needPages = ceil(size / PAGE_SIZE);
         int currSize = size;
+        uint8_t* resultAddr = pageDescriptors[startPage].firstAvailableBlockPtr;
         for (int i = startPage; i < startPage+needPages+1; i++)
         {
             pageDescriptors[i].availabilty = false;
@@ -188,12 +191,13 @@ void* Allocator::mem_alloc_page(size_t size)
 
                 pageDescriptors[i].firstAvailableBlockPtr += (currSize + HEADER_SIZE);
 
-                return (void*)pageDescriptors[startPage].firstAvailableBlockPtr;
+                return (void*)resultAddr;
             }
         }
 
     }
 }
+
 
 int Allocator::find_start_page(size_t size)
 {
@@ -220,6 +224,7 @@ int Allocator::find_start_page(size_t size)
         }
     }
 }
+
 
 void Allocator::write_header(size_t size, uint8_t* start)
 {
@@ -256,6 +261,7 @@ void Allocator::write_header(size_t size, uint8_t* start)
     }*/
 }
 
+
 size_t Allocator::get_size_from_header(uint8_t* start)
 {
     int offset = 0;
@@ -277,7 +283,6 @@ size_t Allocator::get_size_from_header(uint8_t* start)
 }
 
 
-
 size_t Allocator::calculate_size(size_t size)
 {
     size_t need_size = size + HEADER_SIZE;
@@ -292,6 +297,76 @@ size_t Allocator::calculate_size(size_t size)
     }
 }
 
+
+void Allocator::mem_free(void* addr)
+{
+    uint8_t* findedAddr = (uint8_t*)addr;
+    bool availability = *findedAddr;
+    size_t size = get_size_from_header(findedAddr + AVAILABLITY_OFFSET);
+    int pageNumber = find_page(findedAddr);
+
+    cout << "availability " << availability << endl;
+    cout << "size " << size << endl;
+    cout << pageNumber << endl;
+
+    if (pageDescriptors[pageNumber].availabilty || pageNumber == -1)
+        return;
+
+    if (size < PAGE_SIZE / 2) {
+        *findedAddr = true;
+        pageDescriptors[pageNumber].numberFreeBlocks += 1;
+
+        if (pageDescriptors[pageNumber].numberFreeBlocks == PAGE_SIZE / calculate_size(size))
+            pageDescriptors[pageNumber].availabilty = true;
+    }
+    else if (size < PAGE_SIZE) {
+        *findedAddr = true;
+        pageDescriptors[pageNumber].availabilty = true;
+        pageDescriptors[pageNumber].firstAvailableBlockPtr = findedAddr;        
+    }
+    else {
+        int pageCurrNum = pageNumber;
+        uint8_t* currPtr = findedAddr;
+        while (size == PAGE_SIZE) {
+            //cout << "current ptr " << (void*)currPtr << endl;
+            *currPtr = true;
+            pageDescriptors[pageCurrNum].availabilty = true;
+            pageDescriptors[pageCurrNum].firstAvailableBlockPtr = currPtr;
+
+            pageCurrNum++;
+            currPtr += PAGE_SIZE; 
+            size = get_size_from_header(currPtr + AVAILABLITY_OFFSET);
+        }
+
+        if (!pageDescriptors[pageCurrNum].availabilty) {
+            *currPtr = true;
+            pageDescriptors[pageCurrNum].availabilty = true;
+            pageDescriptors[pageCurrNum].firstAvailableBlockPtr = currPtr;
+            
+        }
+       
+    }
+
+    
+
+}
+
+
+
+int Allocator::find_page(uint8_t* findedAddr)
+{
+    uint8_t* currPtr = startPtr;
+
+    for (int i = 0; i < NUMBER_PAGES; i++) {
+        
+        if (findedAddr >= currPtr && findedAddr < pageDescriptors[i].firstAvailableBlockPtr) {
+            return i;
+        }
+
+        currPtr += PAGE_SIZE;
+    }
+    return -1;
+}
 
 
 
@@ -320,6 +395,7 @@ void Allocator::mem_dump()
             if (currBLockSize == PAGE_SIZE) {
                 cout << "\t BLock " << block;
                 cout << "\t address " << (void*)currPagePtr;
+                cout << "\t available " << (bool)*currPagePtr;
                 cout << "\t data size " << blockSize;
                 cout << endl;
                 continue;
@@ -328,6 +404,7 @@ void Allocator::mem_dump()
             while (currPagePtr != pageDescriptors[i].firstAvailableBlockPtr) {
                 cout << "\t BLock " << block;
                 cout << "\t address " << (void*)currPagePtr;
+                cout << "\t available " << (bool)*currPagePtr;
                 cout << "\t data size " << get_size_from_header(currPagePtr+AVAILABLITY_OFFSET);
                 cout << endl;
 
@@ -368,19 +445,35 @@ int main()
     cout << endl;
     allocator.mem_dump();
     cout << "------------------Allocation 20 ------------------" << endl;
-    cout << allocator.mem_alloc(20) << endl;
+    void* addr1 = allocator.mem_alloc(20);
+    cout << addr1 << endl;
     cout << endl;
     allocator.mem_dump();
     cout << "------------------Allocation 800 ------------------" << endl;
-    cout << allocator.mem_alloc(800) << endl;
-    cout << endl;
+    void* addr2 = allocator.mem_alloc(800);
+    cout << addr2 << endl;
     allocator.mem_dump();
 
     cout << "------------------Allocation 2000 ------------------" << endl;
-    cout << allocator.mem_alloc(2000) << endl;
+    void* addr3 = allocator.mem_alloc(2000);
+    cout << addr3 << endl;
     cout << endl;
     allocator.mem_dump();
-   
+
+    cout << "------------------Free  "<<  addr1 <<"------------------" << endl;
+    allocator.mem_free(addr1);
+    cout << endl;
+    allocator.mem_dump();
+
+    cout << "------------------Free  " << addr2 << "------------------" << endl;
+    allocator.mem_free(addr2);
+    cout << endl;
+    allocator.mem_dump();
+
+    cout << "------------------Free  " << addr3 << "------------------" << endl;
+    allocator.mem_free(addr3);
+    cout << endl;
+    allocator.mem_dump(); 
 
 
 }
