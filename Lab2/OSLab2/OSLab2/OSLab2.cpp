@@ -492,20 +492,27 @@ int main()
     cout << endl;
     allocator.mem_dump();
 
-    cout << "------------------Free  "<<  addr1 <<"------------------" << endl;
-    allocator.mem_free(addr1);
+    cout << "------------------Reallocation " << addr1 << "new size" << 15 <<" ------------------" << endl;
+    void* addr4 = allocator.mem_realloc(addr1, 15);
+    cout << addr4 << endl;
     cout << endl;
     allocator.mem_dump();
 
-    cout << "------------------Free  " << addr2 << "------------------" << endl;
-    allocator.mem_free(addr2);
+    cout << "------------------Reallocation " << addr2 << "new size" << 150 << " ------------------" << endl;
+    void* addr5 = allocator.mem_realloc(addr2, 150);
+    cout << addr5 << endl;
     cout << endl;
     allocator.mem_dump();
 
     cout << "------------------Free  " << addr3 << "------------------" << endl;
     allocator.mem_free(addr3);
     cout << endl;
-    allocator.mem_dump(); 
+    allocator.mem_dump();
 
 
+    cout << "------------------Allocation 100 ------------------" << endl;
+    cout << allocator.mem_alloc(100) << endl;
+    cout << endl;
+    allocator.mem_dump();
+     
 }
