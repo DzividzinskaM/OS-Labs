@@ -153,6 +153,7 @@ void* Allocator::mem_alloc_page(size_t size)
         for (int i = 0; i < NUMBER_PAGES; i++) {
             if (pageDescriptors[i].availabilty) {
                 uint8_t* blockCurrPtr = pageDescriptors[i].firstAvailableBlockPtr;
+                uint8_t* result = blockCurrPtr;
                 *blockCurrPtr = false;
                 write_header(size, blockCurrPtr + AVAILABLITY_OFFSET);
                       
@@ -161,7 +162,7 @@ void* Allocator::mem_alloc_page(size_t size)
                 pageDescriptors[i].firstAvailableBlockPtr = blockCurrPtr + HEADER_SIZE + size;
                 pageDescriptors[i].availabilty = false;
                 pageDescriptors[i].numberFreeBlocks = 0;
-                return blockCurrPtr;
+                return (void*)result;
             }
         }
     }
