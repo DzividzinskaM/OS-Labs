@@ -188,7 +188,7 @@ using function mem_alloc.
 * else if it only one page block or multipage block we free memory and allocate new piece of memory.
 
 *Picture 6. Reallocate to smaller size *
-![reallocate_smaller_size](./img/reallocSmallerSize.jpg)
+![realloc](./img/ReallocSmallerSize.jpg)
 <br>
 <br>
 
