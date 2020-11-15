@@ -5,3 +5,8 @@ Lab1/OSlab1/OSlab1.vcxproj
 Lab1/OSlab1/OSlab1.vcxproj.filters
 Lab1/OSlab1/OSlab1.vcxproj.user
 Lab1/OSlab1.sln
+Lab3/OSLab3/bin
+Lab3/OSLab3/obj
+Lab3/OSLab3/.vs
+Lab3/OSLab3/OSLab3.csproj
+*.sln
