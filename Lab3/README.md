@@ -1,7 +1,6 @@
 # Lab 3: Multilevel Feedback Queue Sheduling(MFQS)
 
 ## General description of algorithm 
-
 Initially we have three empty queues with different time quantums.
 
 - *zero queue* - 8ms
@@ -59,9 +58,6 @@ Every *request* from *second* queue is processed for need time.
 ![execute processes in zero queue](./img/mfqs-NotExexcute.png)
 
 ## Examples
----
-
-
 
 *Picture 6. Initial state of queues*
 
@@ -82,7 +78,6 @@ Every *request* from *second* queue is processed for need time.
 ![execute zero queue processes](./img/result-executeProcesses3.png)
 
 ## Graphs 
----
 
 *Pictute 10. Graph of average time on different intensity*
 
