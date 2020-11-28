@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -11,6 +12,11 @@ namespace OSLab3
     {
         private int _zeroQuantumTime = 8;
         private int _firstQuantumTime = 16;
+        private int _intencity;
+        private int _number_process;
+        private double _downtime = 0;
+        private double _generalTime = 0;
+
 
         public Queue<Process> _zeroQueue;
         private Queue<Process> _firstQueue;
@@ -20,29 +26,66 @@ namespace OSLab3
 
 
 
-
-
-        public Planner(List<Process> processes)
+        public Planner(List<Process> processes, int intencity, bool report = false)
         {
+            _intencity = intencity;
+            _number_process = processes.Count;
             _zeroQueue = new Queue<Process>();
             _firstQueue = new Queue<Process>();
             _secondQueue = new Queue<Process>();
 
-            _waitingList = new List<Process>();
+            _waitingList = processes;
 
-            foreach(var process in processes)
-            {
-                _zeroQueue.Enqueue(process);
-            }
+
         }
 
-        public void AddProcess(Process process)
+   
+        public void Execute()
         {
-            _waitingList.Add(process);
+            
+            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+            CancellationToken cancelToken = cancellationTokenSource.Token;
+
+            Parallel.Invoke(
+                () => {
+
+                    while(_zeroQueue.Count > 0)
+                    {
+                        ExecuteProcesses();
+                    }
+                    cancellationTokenSource.Cancel();
+                },
+                () => {
+                  
+                    _downtime += _intencity;
+                    int processIndex = 0;
+                    while(_waitingList.Count > 0)
+                    {
+
+                        _zeroQueue.Enqueue(_waitingList[processIndex]);
+                        _waitingList.RemoveAt(processIndex);
+
+                        if (cancelToken.IsCancellationRequested)
+                            return;
+
+                        Thread.Sleep(_intencity);
+
+                    }
+                }
+                );
+
+            if (_waitingList.Count == 0)
+                ShortReport();
+            else
+                Execute();
         }
+
+     
+
 
         public void ExecuteProcesses()
         {
+            
             QuantumTimeReport(0);
             if (_zeroQueue.Count != 0)
                 ExecuteZeroQueueProcesses();
@@ -55,11 +98,10 @@ namespace OSLab3
 
             if (_zeroQueue.Count == 0 || _firstQueue.Count == 0 || _secondQueue.Count == 0)
                 return;
-            else
-                ExecuteProcesses();
-
 
         }
+
+     
 
         private void ExecuteZeroQueueProcesses()
         {
@@ -74,9 +116,10 @@ namespace OSLab3
                 Parallel.Invoke(
                     () =>
                     {
-                        
+
                         Thread.Sleep(_zeroQuantumTime);
                         cancellationTokenSource.Cancel();
+                       
                     },
                     () =>   {
                         Thread.Sleep(currentProcess.ExecutionTime);
@@ -85,19 +128,12 @@ namespace OSLab3
                             _firstQueue.Enqueue(currentProcess);
                         }                 
                     },
-                    () =>
-                    {
-                        if (_waitingList.Count != 0)
-                        {
-                            foreach (var item in _waitingList)
-                            {
-                                _zeroQueue.Enqueue(item);
-                            }
-                            _waitingList.Clear();
-                        }
-                    }
-                    );
+                    () => {
+                        if(_zeroQuantumTime - currentProcess.ExecutionTime > 0)
+                            _downtime += (_zeroQuantumTime - currentProcess.ExecutionTime);
+                    });
                 QuantumTimeReport(_zeroQuantumTime);
+
             }
 
 
@@ -116,19 +152,24 @@ namespace OSLab3
                 Parallel.Invoke(
                     () =>
                     {
-
                         Thread.Sleep(_firstQuantumTime);
                         cancellationTokenSource.Cancel();
                     },
-                    () => {
+                    () =>
+                    {
                         Thread.Sleep(currentProcess.ExecutionTime);
                         if (cancelToken.IsCancellationRequested)
                         {
                             _secondQueue.Enqueue(currentProcess);
                         }
+                    },
+                    () => {
+                        if (_firstQuantumTime - currentProcess.ExecutionTime > 0)
+                            _downtime += (_firstQuantumTime - currentProcess.ExecutionTime);
                     });
+                    QuantumTimeReport(_firstQuantumTime);
 
-                QuantumTimeReport(_firstQuantumTime);
+
                 if (_zeroQueue.Count != 0)
                     ExecuteZeroQueueProcesses();
                 
@@ -143,8 +184,10 @@ namespace OSLab3
                 Process currentProcess = _secondQueue.Dequeue();
 
                 Thread.Sleep(currentProcess.ExecutionTime);
+                
 
                 QuantumTimeReport(currentProcess.ExecutionTime);
+
 
                 if (_zeroQueue.Count != 0)
                     ExecuteZeroQueueProcesses();
@@ -157,8 +200,11 @@ namespace OSLab3
 
         public void QuantumTimeReport(int quantumTime)
         {
+            _generalTime += quantumTime;
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine($"Quantum time {quantumTime}");
+            Console.WriteLine($"General time {_generalTime}");
+
             Console.WriteLine();
 
             Console.ForegroundColor = ConsoleColor.Yellow;
@@ -193,6 +239,20 @@ namespace OSLab3
                 Console.WriteLine($"Process - {process.ID}, time - {process.ExecutionTime}");
             }
            
+        }
+
+        private void ShortReport()
+        {
+            _downtime -= _intencity;
+            _generalTime += _downtime;
+            double percent = Math.Round(((_downtime / _generalTime)*100), 3);
+            double averageTime = Math.Round((_generalTime / _number_process), 3);
+
+            Console.WriteLine($"Intencity input flow {_intencity}");
+            Console.WriteLine($"Downtime  {_downtime}");
+            Console.WriteLine($"Time  {_generalTime}");
+            Console.WriteLine($"Downtime percent {percent}");
+            Console.WriteLine($"Average time {averageTime}");
         }
 
     }

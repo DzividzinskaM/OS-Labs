@@ -21,33 +21,14 @@ namespace OSLab3
             processes.Add(new Process(5, 18));
             processes.Add(new Process(6, 15));
             processes.Add(new Process(7, 5));
-
-            Planner planner = new Planner(processes);
-
-
-
-            List<Process> additionProceses = new List<Process>();
-
-            additionProceses.Add(new Process(8, 4));
-            additionProceses.Add(new Process(9, 5));
-            additionProceses.Add(new Process(10, 10));
-            additionProceses.Add(new Process(11, 20));
-            additionProceses.Add(new Process(12, 3));
+            processes.Add(new Process(8, 12));
+            processes.Add(new Process(9, 6));
 
 
 
-            Parallel.Invoke(
-                () => {
-                    planner.ExecuteProcesses();
-                },
-                ()=> { 
-                    foreach(var process in additionProceses)
-                    {
-                        Thread.Sleep(50);
-                        planner.AddProcess(process);
-                        
-                    }
-                });
+            Planner planner = new Planner(processes, 0);
+
+            planner.Execute();
 
 
         }
