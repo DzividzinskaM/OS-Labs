@@ -41,7 +41,7 @@ Initial state:
     ![result](./img/result.png)
 
 ## Examples
----
+
 
 Results
 
